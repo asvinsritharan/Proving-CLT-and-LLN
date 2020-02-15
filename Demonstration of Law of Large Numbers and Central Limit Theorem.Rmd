@@ -1,0 +1,229 @@
+---
+title: "Proving Central Limit Theorem, Law of Large Numbers"
+output: html_notebook
+---
+
+Convergence of sample mean to population mean as n goes to infinity
+
+
+```{r}
+# generate uniform samples where P(X=1)=P(X=-1)=1/2
+generate.uniform.samples <- function(n, col) {
+  #create empty matrix with n datapoints and ncol datasets
+  #each column represents a different dataset
+  datasets <- matrix(data = NA, nrow = n, ncol = col)
+  #make the datasets into a dataframe
+  datasets <- as.data.frame(datasets)
+  # randomly sample values between 0 and 1 but set all values above
+  # 0.5 as -1 and all values less than or equal to 0.5 as 1
+  for (i in 1:col){
+    samples <- runif(n, min=0, max=1)
+    samples <- replace(samples, samples < 0.5, -1)
+    samples <- replace(samples, samples >= 0.5, 1)
+    datasets[i] = samples
+  }
+  # return datasets
+  return(datasets)
+}
+
+```
+
+```{r}
+#load tidyverse library
+library(tidyverse)
+# create list of 10, 100, 1000, 10000 and take log of values
+loglist <- c(10, 100, 1000, 10000)
+loglist <- as.data.frame(loglist)
+loglist <- log10(loglist)
+mu = 0
+# the population mean of our samples is 0 since X=1 and X=-1 have probabilities
+# 1/2, thus the expectation is 0
+# generate samples for # of data points being 10, 100, 1000, 10000
+points10 <- generate.uniform.samples(10, 1)
+points100 <- generate.uniform.samples(100, 1)
+points1000 <- generate.uniform.samples(1000, 1)
+points10000 <- generate.uniform.samples(10000, 1)
+# calculate sample mean of the points
+mean10 <- mean(points10[,1])
+mean100 <- mean(points100[,1])
+mean1000 <- mean(points1000[,1])
+mean10000 <- mean(points10000[,1])
+# create dataframe to plot sample means
+meanlist <- c(mean10, mean100, mean1000, mean10000)
+meanlist <- as.data.frame(meanlist)
+tograph <- as.data.frame(meanlist)
+tograph[2] <- loglist
+# plot values of sample means against 
+ggplot(tograph, aes(x=loglist, y=meanlist))+geom_point()
+```
+
+This plot showed us that the deviation between sample mean and population mean converges to 0 as n goes to infinity
+
+
+Law of Large Numbers
+
+
+```{r}
+# given a number of data points and an epsilon, find differences (between sample mean and population mean) and only get those that are greater than epsilon
+diff.less.eps = function(n, epsilon){
+  samples <- generate.uniform.samples(n, 10000)
+  count <- 0
+  for (i in 1:10000){
+    avg <- mean(samples[,i])
+    if (avg > epsilon) {
+      count = count + 1
+    }
+  }
+  return (1/10000 * count)
+}
+# create data frame where first column is differences for datasets with 10, 100, 1000 and 10000 data points and second column is the column with log of n datapoints.
+diff.for.n = function(epsilon){
+  difffor10 <- diff.less.eps(10, epsilon)
+  difffor100 <- diff.less.eps(100, epsilon)
+  difffor1000 <- diff.less.eps(1000, epsilon)
+  difffor10000 <- diff.less.eps(10000, epsilon)
+  difflist <- c(difffor10, difffor100, difffor1000, difffor10000)
+  difflist <- as.data.frame(difflist)
+  tograph <- as.data.frame(difflist)
+  loglist <- c(10, 100, 1000, 10000)
+  loglist <- as.data.frame(loglist)
+  loglist <- log10(loglist)
+  tograph[2] <- loglist
+  return(tograph)
+}
+# get dataframes for each epsilon of 0.5, 0.1 and 0.05
+tograph0.5 <- diff.for.n(0.5)
+tograph0.1 <- diff.for.n(0.1)
+tograph0.05 <- diff.for.n(0.05)
+```
+
+```{r}
+#plot dataframes
+ggplot(tograph0.5, aes(x=loglist, y=difflist))+geom_point()
+ggplot(tograph0.1, aes(x=loglist, y=difflist))+geom_point()
+ggplot(tograph0.05, aes(x=loglist, y=difflist))+geom_point()
+
+```
+This shows the law of large numbers. As the number of datapoints grows, the the mean differences between sample mean and population mean get smaller. This is excessively noticable as the epsilon gets smaller. We notice a trend of "as n gets larger, the mean differences decrease"
+
+Central Limit Theorem
+
+
+```{r}
+# create samples for n datapoints with col datasets
+generate.uniform.samples <- function(n, col) {
+  dataset <- matrix(data = NA, nrow = n, ncol = col)
+  dataset <- as.data.frame(dataset)
+  for (i in 1:col){
+    samples <- runif(n, min=0, max=1)
+    samples <- replace(samples, samples < 0.5, -1)
+    samples <- replace(samples, samples >= 0.5, 1)
+    dataset[i] = samples
+  }
+  return(dataset)
+}
+# get samples for 10 datapoints in 10000 datasets
+samp10 <- generate.uniform.samples(10, 10000)
+# get samples for 1000 datapoints in 10000 datasets
+samp1000 <- generate.uniform.samples(1000, 10000)
+# get samples for 10000 datapoints in 10000 datasets
+samp10000 <- generate.uniform.samples(10000, 10000)
+```
+
+
+```{r}
+# get the average of each dataset in the inputted dataframe
+avg <- function(x){
+  averg = matrix(data=NA, nrow=1, ncol=10000)
+  for (i in 1:10000){
+    avg <- mean(x[,i])
+    averg[i] <- avg
+  }
+  return(averg)
+}
+# get average of dataframe with 10000 datasets with 10 datapoints each
+samp10 <- avg(samp10)
+# get average of dataframe with 10000 datasets with 1000 datapoints each
+samp1000 <- avg(samp1000)
+# get average of dataframe with 10000 datasets with 10000 datapoints each
+samp10000 <- avg(samp10000)
+```
+```{r}
+# multiply average of dataframe with the square root of the number of data points in each dataset
+samp10 <- samp10*sqrt(10)
+samp1000 <- samp1000*sqrt(1000)
+samp10000 <- samp10000*sqrt(10000)
+```
+```{r}
+# create data frame for each calculation
+samp10 <- data.frame(col = c(t(samp10)), stringsAsFactors = FALSE)
+samp1000 <- data.frame(col = c(t(samp1000)), stringsAsFactors = FALSE)
+samp10000 <- data.frame(col = c(t(samp10000)), stringsAsFactors = FALSE)
+```
+```{r}
+#plot each calculation as histograms
+ggplot(samp10, aes(x=col)) + geom_histogram(bins = 10)
+ggplot(samp1000, aes(x=col)) + geom_histogram(bins = 10)
+ggplot(samp10000, aes(x=col)) + geom_histogram(bins = 10)
+# plot qqplots to see if they follow normality
+qqnorm(samp10[,1])
+qqline(samp10, lwd=2)
+qqnorm(samp1000[,1])
+qqline(samp1000, lwd=2)
+qqnorm(samp10000[,1])
+qqline(samp10000, lwd=2)
+```
+
+This demonstrates the central limit theorem. as the data is generated from a uniform space. But by subtracting population mean, dividing by population variance (1) and multiplying by square root of the number of datapoints in each dataset, we see that we achieve normality.
+
+Convergence in probability does not imply convergence in distribution
+
+
+```{r}
+# generate 10000 independent random variables 
+Y <- rnorm(10000, 0, 1);
+```
+
+```{r}
+# given n # of datapoints and an epsilon 
+diff.less.eps = function(n, epsilon){
+  # generate 10000 datasets with n datapoints
+  samples <- generate.uniform.samples(n, 10000)
+  count <- 0
+  # for each dataset calculate the mean, multiply it with square root of
+  # number n datapoints and subtract the ith random variable of the Y dataframe
+  # if the difference is greater than epsilon add 1 to the count variable
+  for (i in 1:10000){
+    avg <- mean(samples[,i])
+    avg <- avg*sqrt(n) - Y[i]
+    if (avg > epsilon) {
+      count = count + 1
+    }
+  }
+  # divide the count by 10000 and return the value
+  return (count/10000)
+}
+# given epsilon get the differences for 10, 100, 1000, 10000 datapoints in 10000 datasets for each epsilon and return dataframe with differences for given epsilon in first column and log10 of number of datapoints in second column
+diff.for.n = function(epsilon){
+  difffor10 <- diff.less.eps(10, epsilon)
+  difffor100 <- diff.less.eps(100, epsilon)
+  difffor1000 <- diff.less.eps(1000, epsilon)
+  difffor10000 <- diff.less.eps(10000, epsilon)
+  difflist <- c(difffor10, difffor100, difffor1000, difffor10000)
+  difflist <- as.data.frame(difflist)
+  tograph <- as.data.frame(difflist)
+  loglist <- c(10, 100, 1000, 10000)
+  loglist <- as.data.frame(loglist)
+  loglist <- log10(loglist)
+  tograph[2] <- loglist
+  return(tograph)
+}
+#plot the scatterplot graph for diff.for.n of epsilon of 0.001 
+tograph <- diff.for.n(0.001)
+ggplot(tograph, aes(x=loglist, y=difflist)) + geom_point()
+```
+
+This proves that convergence in probability does not imply a convergence in distribution. We see this because as the number of datapoints increase, the difference does not go down, implying  there is no convergence in distribution.
+
+
+
